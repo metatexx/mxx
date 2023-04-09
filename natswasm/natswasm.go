@@ -1,0 +1,38 @@
+package natswasm
+
+import (
+	"context"
+	"github.com/nats-io/nats.go"
+	"net"
+	"nhooyr.io/websocket"
+	"time"
+)
+
+type ConnectionWrapper struct {
+	TimeOut time.Duration
+	ws      *websocket.Conn
+}
+
+var _ nats.CustomDialer = (*ConnectionWrapper)(nil) // Verify the implementation
+
+func (cw ConnectionWrapper) Dial(_, address string) (net.Conn, error) {
+	var ctx context.Context
+	if cw.TimeOut > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), cw.TimeOut)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
+	c, _, err := websocket.Dial(ctx, "wss://"+address, nil)
+	if err != nil {
+		return nil, err
+	}
+	cw.ws = c
+	return websocket.NetConn(context.Background(), c, websocket.MessageBinary), nil
+}
+
+func (cw ConnectionWrapper) SkipTLSHandshake() bool {
+	return true
+}
