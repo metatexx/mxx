@@ -27,7 +27,7 @@ func ErrorWithSkip(err error, skip int) error {
 // Notice: If there are error types in the arguments and all of them are nil,
 // the function will nil
 func Errorf(format string, args ...any) error {
-	return ErrorfWithSkip(2, format, args)
+	return ErrorfWithSkip(2, format, args...)
 }
 
 // ErrorfWithSkip wraps the Errorf output and puts file and line in the front of it.
@@ -35,7 +35,11 @@ func Errorf(format string, args ...any) error {
 // Notice: If there are error types in the arguments and all of them are nil,
 // the function will nil
 func ErrorfWithSkip(skip int, format string, args ...any) error {
-	_, file, line, _ := runtime.Caller(skip)
+	_, file, line, ok := runtime.Caller(skip)
+	if !ok {
+		file = "(unknown)"
+		line = 0
+	}
 	format = "%s:%d: " + format
 	nargs := make([]any, 0, len(args)+2)
 	// not sure if that should be without path,  but having the path may expose private data?
@@ -57,5 +61,5 @@ func ErrorfWithSkip(skip int, format string, args ...any) error {
 	if errs > 0 && notNil == 0 {
 		return nil
 	}
-	return fmt.Errorf(format, nargs)
+	return fmt.Errorf(format, nargs...)
 }
