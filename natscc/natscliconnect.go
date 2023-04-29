@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/choria-io/fisk"
 	"github.com/nats-io/nats.go"
 	"os"
 )
 
-type contextData struct {
+type minimalNatsContext struct {
 	URL   string
 	Creds string
 	NSC   string
@@ -18,13 +19,43 @@ type contextData struct {
 // This uses the flag package and parses the flags. Make sure to add your flags before
 // calling this function!
 func FlagConnect(opts ...nats.Option) (*nats.Conn, error) {
-	// Connect and get the JetStream context.
-	natsContext := flag.String("context", "", "nats context")
-	skipContext := flag.Bool("skip-context", false, "skipt the nats context evaluation")
-	natsServers := flag.String("s", "", "server")
-	credsFile := flag.String("c", "", "creds file")
+	context := FlagContext()
 	flag.Parse()
-	servers, creds, err := ContextEval(*natsServers, *credsFile, *natsContext, *skipContext)
+	return context.Connect(opts...)
+}
+
+type NccContext struct {
+	context     string
+	skipContext bool
+	servers     string
+	credsFile   *string
+}
+
+// FlagContext creates a context for connect to a nats server similar to the nats cli and its context
+// This uses the flag package and prepares some flags to parse into the private fields.
+func FlagContext() *NccContext {
+	nccc := &NccContext{}
+	flag.StringVar(&nccc.context, "context", "", "nats context")
+	flag.BoolVar(&nccc.skipContext, "skip-context", false, "skipt the nats context evaluation")
+	flag.StringVar(&nccc.servers, "s", "", "server")
+	creds := ""
+	nccc.credsFile = &creds
+	flag.StringVar(nccc.credsFile, "c", "", "creds file")
+	return nccc
+}
+
+// FiskContext creates a context based on fisk cli args
+func FiskContext(cli *fisk.Application) *NccContext {
+	nccc := &NccContext{}
+	cli.Flag("context", "nats context").Short('C').StringVar(&nccc.context)
+	cli.Flag("skip-context", "skipt the nats context evaluation").BoolVar(&nccc.skipContext)
+	cli.Flag("server", "nats servers").Short('s').StringVar(&nccc.servers)
+	nccc.credsFile = cli.Flag("creds", "creds file").Short('c').ExistingFile()
+	return nccc
+}
+
+func (nccc *NccContext) Connect(opts ...nats.Option) (*nats.Conn, error) {
+	servers, creds, err := ContextEval(nccc.servers, *nccc.credsFile, nccc.context, nccc.skipContext)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +97,7 @@ func ContextEval(natsServer string, credsFile string, natsContext string,
 			natsContext = string(contextName)
 		}
 	}
-	var cd contextData
+	var cd minimalNatsContext
 	if natsContext != "" {
 		// this may be highly internal, but it works well enough for us right now
 		buf, err := os.ReadFile(homeDir + "/.config/nats/context/" + natsContext + ".json")
