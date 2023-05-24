@@ -10,12 +10,13 @@ import (
 
 type ConnectionWrapper struct {
 	TimeOut time.Duration
+	NoTLS   bool
 	ws      *websocket.Conn
 }
 
 var _ nats.CustomDialer = (*ConnectionWrapper)(nil) // Verify the implementation
 
-func (cw ConnectionWrapper) Dial(_, address string) (net.Conn, error) {
+func (cw ConnectionWrapper) Dial(_ string, address string) (net.Conn, error) {
 	var ctx context.Context
 	if cw.TimeOut > 0 {
 		var cancel context.CancelFunc
@@ -25,7 +26,12 @@ func (cw ConnectionWrapper) Dial(_, address string) (net.Conn, error) {
 		ctx = context.Background()
 	}
 
-	c, _, err := websocket.Dial(ctx, "wss://"+address, nil)
+	if cw.NoTLS {
+		address = "ws://" + address
+	} else {
+		address = "wss://" + address
+	}
+	c, _, err := websocket.Dial(ctx, address, nil)
 	if err != nil {
 		return nil, err
 	}
