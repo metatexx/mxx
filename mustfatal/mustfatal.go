@@ -2,16 +2,14 @@ package mustfatal
 
 import (
 	"log"
+	"log/slog"
 	"os"
 	"runtime"
-
-	"golang.org/x/exp/slog"
 )
 
-// set SLog to use the slog package (skips any log logger)
+// SLog is set to use the slog package (skips any log logger)
 var SLog *slog.Logger
 
-// set Log to a custom log logger if needed
 var Log *log.Logger
 
 //var LogSLog slog.Logger

@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/choria-io/fisk"
 	"github.com/nats-io/nats.go"
-	"os"
 )
 
 type minimalNatsContext struct {

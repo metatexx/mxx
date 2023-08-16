@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"testing"
 
-	"git.jetbrains.space/metatexx/mxc/jetindex/pkg/sqltypes/dbdate"
-	"git.jetbrains.space/metatexx/mxc/jetindex/pkg/sqltypes/mfenum"
+	"github.com/metatexx/mxx/sqltypes/dbdate"
+	"github.com/metatexx/mxx/sqltypes/mfenum"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/uptrace/bun"

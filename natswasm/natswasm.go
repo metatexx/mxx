@@ -2,10 +2,11 @@ package natswasm
 
 import (
 	"context"
-	"github.com/nats-io/nats.go"
 	"net"
-	"nhooyr.io/websocket"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	"nhooyr.io/websocket"
 )
 
 type ConnectionWrapper struct {
