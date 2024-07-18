@@ -2,11 +2,9 @@ package natscc
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 
-	"github.com/choria-io/fisk"
 	"github.com/nats-io/nats.go"
 )
 
@@ -16,54 +14,7 @@ type minimalNatsContext struct {
 	NSC   string
 }
 
-// FlagConnect connects to a nats server similar to the nats cli and its context
-// This uses the flag package and parses the flags. Make sure to add your flags before
-// calling this function!
-func FlagConnect(opts ...nats.Option) (*nats.Conn, error) {
-	context := FlagContext()
-	flag.Parse()
-	return context.Connect(opts...)
-}
-
-type NccContext struct {
-	context     string
-	skipContext bool
-	servers     string
-	credsFile   *string
-}
-
-// FlagContext creates a context for connect to a nats server similar to the nats cli and its context
-// This uses the flag package and prepares some flags to parse into the private fields.
-func FlagContext() *NccContext {
-	nccc := &NccContext{}
-	flag.StringVar(&nccc.context, "context", "", "nats context")
-	flag.BoolVar(&nccc.skipContext, "skip-context", false, "skipt the nats context evaluation")
-	flag.StringVar(&nccc.servers, "s", "", "server")
-	creds := ""
-	nccc.credsFile = &creds
-	flag.StringVar(nccc.credsFile, "c", "", "creds file")
-	return nccc
-}
-
-// FiskContext creates a context based on fisk cli args
-func FiskContext(cli *fisk.Application) *NccContext {
-	nccc := &NccContext{}
-	cli.Flag("context", "nats context").Short('C').StringVar(&nccc.context)
-	cli.Flag("skip-context", "skipt the nats context evaluation").BoolVar(&nccc.skipContext)
-	cli.Flag("server", "nats servers").Short('s').StringVar(&nccc.servers)
-	nccc.credsFile = cli.Flag("creds", "creds file").Short('c').ExistingFile()
-	return nccc
-}
-
-func (nccc *NccContext) Connect(opts ...nats.Option) (*nats.Conn, error) {
-	servers, creds, err := ContextEval(nccc.servers, *nccc.credsFile, nccc.context, nccc.skipContext)
-	if err != nil {
-		return nil, err
-	}
-	return CredsConnect(servers, creds, opts...)
-}
-
-// NatsCredsConnect connects to a nats server using a creds file
+// CredsConnect connects to a nats server using a creds file
 func CredsConnect(servers string, credsFile string,
 	opts ...nats.Option) (*nats.Conn, error) {
 	// Connect and get the JetStream context.
@@ -93,7 +44,8 @@ func ContextEval(natsServer string, credsFile string, natsContext string,
 	}
 	if natsContext == "" && !skipContext {
 		// this may be highly internal, but it works well enough for us right now
-		contextName, _ := os.ReadFile(homeDir + "/.config/nats/context.txt")
+		var contextName []byte
+		contextName, err = os.ReadFile(homeDir + "/.config/nats/context.txt")
 		if err == nil {
 			natsContext = string(contextName)
 		}
@@ -124,4 +76,53 @@ func ContextEval(natsServer string, credsFile string, natsContext string,
 		}
 	}
 	return natsServer, credsFile, err
+}
+
+/* NccContext is meant to be used with some kind or argument or config tool.
+
+Example:
+
+// FlagContext creates a context for connect to a nats server similar to the nats cli and its context
+// This uses the flag package and prepares some flags to parse into the private fields.
+
+func FlagContext() *NccContext {
+	nccc := &NccContext{}
+	flag.StringVar(&nccc.Context, "context", "", "nats context")
+	flag.BoolVar(&nccc.SkipContext, "skip-context", false, "skipt the nats context evaluation")
+	flag.StringVar(&nccc.Servers, "s", "", "server")
+	creds := ""
+	nccc.credsFile = &creds
+	flag.StringVar(nccc.SredsFile, "c", "", "creds file")
+	return nccc
+}
+
+// FiskContext creates a context based on fisk cli args
+// needs: import "github.com/choria-io/fisk"
+
+func FiskContext(cli *fisk.Application) *NccContext {
+	nccc := &NccContext{}
+	cli.Flag("context", "nats context").Short('C').StringVar(&nccc.Context)
+	cli.Flag("skip-context", "skipt the nats context evaluation").BoolVar(&nccc.SkipContext)
+	cli.Flag("server", "nats servers").Short('s').StringVar(&nccc.Servers)
+	nccc.credsFile = cli.Flag("creds", "creds file").Short('c').ExistingFile()
+	return nccc
+}
+
+*/
+
+type NccContext struct {
+	Context     string
+	SkipContext bool
+	Servers     string
+	CredsFile   *string
+}
+
+// Connect is a helper that uses the NccContext type to create a nats connection similar to
+// how nats-cli uses contexts or creds files.
+func (nccc *NccContext) Connect(opts ...nats.Option) (*nats.Conn, error) {
+	servers, creds, err := ContextEval(nccc.Servers, *nccc.CredsFile, nccc.Context, nccc.SkipContext)
+	if err != nil {
+		return nil, err
+	}
+	return CredsConnect(servers, creds, opts...)
 }
