@@ -5,8 +5,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/nats-io/nats.go"
-	"nhooyr.io/websocket"
 )
 
 type ConnectionWrapper struct {
